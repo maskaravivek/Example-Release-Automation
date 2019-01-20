@@ -1,6 +1,10 @@
 apply plugin: 'com.android.application'
 
-apply plugin: 'com.github.triplet.play'
+def isRunningOnTravisAndIsNotPRBuild = System.getenv("CI") == "true" && file('../service-account-key.p12').exists()
+
+if(isRunningOnTravisAndIsNotPRBuild) {
+    apply plugin: 'com.github.triplet.play'
+}
 
 android {
     compileSdkVersion 28
@@ -15,12 +19,7 @@ android {
 
 
     signingConfigs {
-        release {
-            storeFile file("../keystore.jks")
-            storePassword "keystore"
-            keyAlias "test-keystore"
-            keyPassword "keystore"
-        }
+        release
     }
 
     buildTypes {
@@ -29,6 +28,13 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+
+    if (isRunningOnTravisAndIsNotPRBuild) {
+        signingConfigs.release.storeFile = file("../keystore.jks")
+        signingConfigs.release.storePassword = System.getenv("keystore_password")
+        signingConfigs.release.keyAlias = System.getenv("key_alias")
+        signingConfigs.release.keyPassword = System.getenv("key_password")
     }
 }
 
@@ -41,14 +47,16 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 }
 
-play {
-    track = "alpha"
-    userFraction = 1
-    serviceAccountEmail = "mango-app-studio@api-5276365902853364760-837358.iam.gserviceaccount.com"
-    serviceAccountCredentials = file("../service-account-key.p12")
+if (isRunningOnTravisAndIsNotPRBuild) {
+    play {
+        track = "alpha"
+        userFraction = 1
+        serviceAccountEmail = "mango-app-studio@api-5276365902853364760-837358.iam.gserviceaccount.com"
+        serviceAccountCredentials = file("../service-account-key.p12")
 
-    resolutionStrategy = "auto"
-    outputProcessor { // this: ApkVariantOutput
-        versionNameOverride = "$versionNameOverride.$versionCode"
+        resolutionStrategy = "auto"
+        outputProcessor { // this: ApkVariantOutput
+            versionNameOverride = "$versionNameOverride.$versionCode"
+        }
     }
 }
